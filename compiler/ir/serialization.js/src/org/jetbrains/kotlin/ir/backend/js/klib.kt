@@ -26,6 +26,7 @@ import org.jetbrains.kotlin.ir.descriptors.IrBuiltIns
 import org.jetbrains.kotlin.ir.util.ExpectDeclarationRemover
 import org.jetbrains.kotlin.ir.util.IrDeserializer
 import org.jetbrains.kotlin.ir.util.SymbolTable
+import org.jetbrains.kotlin.ir.util.generateTypicalIrProviderList
 import org.jetbrains.kotlin.ir.visitors.acceptVoid
 import org.jetbrains.kotlin.js.analyzer.JsAnalysisResult
 import org.jetbrains.kotlin.js.config.JSConfigurationKeys
@@ -194,8 +195,12 @@ private fun runAnalysisAndPreparePsi2Ir(depsDescriptors: ModulesStructure): Gene
     )
 }
 
-fun GeneratorContext.generateModuleFragment(files: List<KtFile>, deserializer: IrDeserializer? = null) =
-    Psi2IrTranslator(languageVersionSettings, configuration).generateModuleFragment(this, files, deserializer)
+fun GeneratorContext.generateModuleFragment(files: List<KtFile>, deserializer: IrDeserializer? = null): IrModuleFragment {
+    val irProviders = generateTypicalIrProviderList(moduleDescriptor, irBuiltIns, symbolTable, deserializer)
+    return Psi2IrTranslator(
+        languageVersionSettings, configuration, mangler = JsMangler).generateModuleFragment(this, files, irProviders
+    )
+}
 
 
 private fun createBuiltIns(storageManager: StorageManager) = object : KotlinBuiltIns(storageManager) {}

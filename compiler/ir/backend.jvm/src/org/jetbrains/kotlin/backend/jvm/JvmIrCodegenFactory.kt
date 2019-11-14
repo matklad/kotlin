@@ -21,7 +21,9 @@ import org.jetbrains.kotlin.codegen.*
 import org.jetbrains.kotlin.codegen.state.GenerationState
 import org.jetbrains.kotlin.descriptors.PackageFragmentDescriptor
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
+import org.jetbrains.kotlin.ir.util.ExternalDependenciesGenerator
 import org.jetbrains.kotlin.ir.util.SymbolTable
+import org.jetbrains.kotlin.ir.util.generateTypicalIrProviderList
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi2ir.PsiSourceManager
@@ -39,7 +41,16 @@ class JvmIrCodegenFactory(private val phaseConfig: PhaseConfig) : CodegenFactory
         symbolTable: SymbolTable,
         sourceManager: PsiSourceManager
     ) {
-        JvmBackendFacade.doGenerateFilesInternal(state, errorHandler, irModuleFragment, symbolTable, sourceManager, phaseConfig)
+        val facadeGenerator = JvmBackendFacade.FacadeClassGenerator()
+        val irProviders = generateTypicalIrProviderList(
+            irModuleFragment.descriptor, irModuleFragment.irBuiltins, symbolTable,
+            externalDeclarationOrigin = JvmGeneratorExtensions.externalDeclarationOrigin,
+            facadeClassGenerator = facadeGenerator::generate
+        )
+        ExternalDependenciesGenerator(symbolTable, irProviders).generateUnboundSymbolsAsDependencies()
+        JvmBackendFacade.doGenerateFilesInternal(
+            state, errorHandler, irModuleFragment, symbolTable, sourceManager, phaseConfig, facadeGenerator.classNameOverride
+        )
     }
 
     override fun createPackageCodegen(state: GenerationState, files: Collection<KtFile>, fqName: FqName): PackageCodegen {

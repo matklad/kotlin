@@ -10,16 +10,14 @@ import org.jetbrains.kotlin.backend.common.ir.createParameterDeclarations
 import org.jetbrains.kotlin.backend.common.phaser.PhaseConfig
 import org.jetbrains.kotlin.backend.jvm.codegen.ClassCodegen
 import org.jetbrains.kotlin.backend.jvm.lower.MultifileFacadeFileEntry
+import org.jetbrains.kotlin.backend.jvm.serialization.JvmMangler
 import org.jetbrains.kotlin.codegen.CompilationErrorHandler
 import org.jetbrains.kotlin.codegen.state.GenerationState
 import org.jetbrains.kotlin.ir.builders.declarations.buildClass
 import org.jetbrains.kotlin.ir.declarations.IrClass
 import org.jetbrains.kotlin.ir.declarations.IrDeclarationOrigin
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
-import org.jetbrains.kotlin.ir.util.ExternalDependenciesGenerator
-import org.jetbrains.kotlin.ir.util.SymbolTable
-import org.jetbrains.kotlin.ir.util.defaultType
-import org.jetbrains.kotlin.ir.util.render
+import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.load.kotlin.JvmPackagePartSource
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi2ir.Psi2IrTranslator
@@ -36,11 +34,17 @@ object JvmBackendFacade {
         phaseConfig: PhaseConfig
     ) {
         val facadeGenerator = FacadeClassGenerator()
-        val psi2ir = Psi2IrTranslator(state.languageVersionSettings, facadeClassGenerator = facadeGenerator::generate)
+        val psi2ir = Psi2IrTranslator(state.languageVersionSettings, facadeClassGenerator = facadeGenerator::generate, mangler = JvmMangler)
         val psi2irContext = psi2ir.createGeneratorContext(state.module, state.bindingContext, extensions = JvmGeneratorExtensions)
-        val irModuleFragment = psi2ir.generateModuleFragment(psi2irContext, files)
+        val irProviders = generateTypicalIrProviderList(
+            psi2irContext.moduleDescriptor, psi2irContext.irBuiltIns, psi2irContext.symbolTable,
+            externalDeclarationOrigin = JvmGeneratorExtensions.externalDeclarationOrigin,
+            facadeClassGenerator = facadeGenerator::generate
+        )
+        val irModuleFragment = psi2ir.generateModuleFragment(psi2irContext, files, irProviders = irProviders)
         doGenerateFilesInternal(
-            state, errorHandler, irModuleFragment, psi2irContext.symbolTable, psi2irContext.sourceManager, phaseConfig, facadeGenerator
+            state, errorHandler, irModuleFragment, psi2irContext.symbolTable, psi2irContext.sourceManager, phaseConfig,
+            facadeGenerator.classNameOverride
         )
     }
 
@@ -51,10 +55,10 @@ object JvmBackendFacade {
         symbolTable: SymbolTable,
         sourceManager: PsiSourceManager,
         phaseConfig: PhaseConfig,
-        facadeGenerator: FacadeClassGenerator = FacadeClassGenerator()
+        classNameOverride: MutableMap<IrClass, JvmClassName>
     ) {
         val context = JvmBackendContext(
-            state, sourceManager, irModuleFragment.irBuiltins, irModuleFragment, symbolTable, phaseConfig
+            state, sourceManager, irModuleFragment.irBuiltins, irModuleFragment, symbolTable, phaseConfig, classNameOverride
         )
         state.irBasedMapAsmMethod = { descriptor ->
             context.methodSignatureMapper.mapAsmMethod(context.referenceFunction(descriptor).owner)
@@ -62,15 +66,6 @@ object JvmBackendFacade {
         state.mapInlineClass = { descriptor ->
             context.typeMapper.mapType(context.referenceClass(descriptor).owner.defaultType)
         }
-        //TODO
-        ExternalDependenciesGenerator(
-            irModuleFragment.descriptor,
-            symbolTable,
-            irModuleFragment.irBuiltins,
-            JvmGeneratorExtensions.externalDeclarationOrigin,
-            facadeClassGenerator = facadeGenerator::generate
-        ).generateUnboundSymbolsAsDependencies()
-        context.classNameOverride = facadeGenerator.classNameOverride
 
         for (irFile in irModuleFragment.files) {
             for (extension in IrGenerationExtension.getInstances(context.state.project)) {
