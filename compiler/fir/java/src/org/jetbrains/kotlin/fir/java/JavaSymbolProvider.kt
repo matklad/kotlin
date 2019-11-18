@@ -95,6 +95,7 @@ class JavaSymbolProvider(
         return scopeSession.getOrBuild(regularClass.symbol, JAVA_USE_SITE) {
             val declaredScope = declaredMemberScope(
                 regularClass,
+                scopeSession,
                 useLazyNestedClassifierScope = regularClass is FirJavaClass,
                 existingNames = (regularClass as? FirJavaClass)?.existingNestedClassifierNames
             )
