@@ -241,6 +241,7 @@ class CoroutinesDebuggerTree(project: Project) : DebuggerTree(project) {
             "getStackTraceElement",
             "()Ljava/lang/StackTraceElement;"
         )
+        suspendContext.debugProcess
         val debugMetadataKtType = execContext
             .findClass("kotlin.coroutines.jvm.internal.DebugMetadataKt") as ClassType
         val vars = with(KotlinCoroutinesAsyncStackTraceProvider()) {
