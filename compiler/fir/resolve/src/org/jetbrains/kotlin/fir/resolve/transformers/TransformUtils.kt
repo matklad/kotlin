@@ -19,7 +19,7 @@ import org.jetbrains.kotlin.fir.visitors.compose
 
 internal object MapArguments : FirDefaultTransformer<Map<FirElement, FirElement>>() {
     override fun <E : FirElement> transformElement(element: E, data: Map<FirElement, FirElement>): CompositeTransformResult<E> {
-        return ((data[element] ?: element) as E).compose()
+        return ((data[element] ?: element).transformChildren(this, data) as E).compose()
     }
 
     override fun transformFunctionCall(

@@ -5,6 +5,7 @@
 
 package org.jetbrains.kotlin.fir.resolve.inference
 
+import org.jetbrains.kotlin.fir.FirElement
 import org.jetbrains.kotlin.fir.copy
 import org.jetbrains.kotlin.fir.declarations.FirAnonymousFunction
 import org.jetbrains.kotlin.fir.declarations.impl.FirValueParameterImpl
@@ -48,6 +49,9 @@ class FirCallCompleter(
 ) : BodyResolveComponents by components {
     private val completer = ConstraintSystemCompleter(components.inferenceComponents)
 
+
+    val replacements = mutableMapOf<FirElement, FirElement>()
+
     fun <T> completeCall(call: T, expectedTypeRef: FirTypeRef?): T
             where T : FirResolvable, T : FirStatement {
         val typeRef = typeFromCallee(call)
@@ -78,7 +82,7 @@ class FirCallCompleter(
         }
 
         val completionMode = candidate.computeCompletionMode(inferenceComponents, expectedTypeRef, initialType)
-        val replacements = mutableMapOf<FirExpression, FirExpression>()
+
 
         val analyzer =
             PostponedArgumentsAnalyzer(
@@ -91,9 +95,9 @@ class FirCallCompleter(
             analyzer.analyze(candidate.system.asPostponedArgumentsAnalyzerContext(), it)
         }
 
-        call.transformChildren(MapArguments, replacements.toMap())
-
         if (completionMode == KotlinConstraintSystemCompleter.ConstraintSystemCompletionMode.FULL) {
+            call.transformChildren(MapArguments, replacements)
+            replacements.clear()
             val finalSubstitutor =
                 candidate.system.asReadOnlyStorage().buildAbstractResultingSubstitutor(inferenceComponents.ctx) as ConeSubstitutor
             return call.transformSingle(
@@ -105,7 +109,7 @@ class FirCallCompleter(
     }
 
     private inner class LambdaAnalyzerImpl(
-        val replacements: MutableMap<FirExpression, FirExpression>
+        val replacements: MutableMap<FirElement, FirElement>
     ) : LambdaAnalyzer {
         override fun analyzeAndGetLambdaReturnArguments(
             lambdaArgument: FirAnonymousFunction,

@@ -6,6 +6,7 @@
 package org.jetbrains.kotlin.fir.resolve.calls
 
 import org.jetbrains.kotlin.fir.FirCallResolver
+import org.jetbrains.kotlin.fir.FirElement
 import org.jetbrains.kotlin.fir.declarations.FirAnonymousFunction
 import org.jetbrains.kotlin.fir.diagnostics.FirSimpleDiagnostic
 import org.jetbrains.kotlin.fir.expressions.FirExpression
@@ -47,7 +48,7 @@ class PostponedArgumentsAnalyzer(
     private val typeProvider: (FirExpression) -> FirTypeRef?,
     private val components: InferenceComponents,
     private val candidate: Candidate,
-    private val replacements: MutableMap<FirExpression, FirExpression>,
+    private val replacements: MutableMap<FirElement, FirElement>,
     private val callResolver: FirCallResolver
 ) {
 
