@@ -31,6 +31,7 @@ import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.psi.KtDeclaration
 import org.jetbrains.kotlin.psi.KtNamedDeclaration
 import org.jetbrains.kotlin.psi.psiUtil.hasBody
+import org.jetbrains.kotlin.resolve.jvm.annotations.JVM_DEFAULT_FQ_NAME
 
 abstract class KtLightMemberImpl<out D : PsiMember>(
     computeRealDelegate: () -> D,
@@ -90,9 +91,9 @@ private class KtLightMemberModifierList(
     owner: KtLightMember<*>, private val dummyDelegate: PsiModifierList?
 ) : KtLightModifierList<KtLightMember<*>>(owner) {
     override fun hasModifierProperty(name: String) = when {
-        name == PsiModifier.ABSTRACT && isImplementationInInterface() -> false
+        name == PsiModifier.ABSTRACT && isImplementationInInterface() -> !owner.annotations.any { it.hasQualifiedName(JVM_DEFAULT_FQ_NAME.asString()) }
         // pretend this method behaves like a default method
-        name == PsiModifier.DEFAULT && isImplementationInInterface() -> true
+        name == PsiModifier.DEFAULT && isImplementationInInterface() -> owner.annotations.any { it.hasQualifiedName(JVM_DEFAULT_FQ_NAME.asString()) }
         name == PsiModifier.FINAL && ((owner.containingClass as? KtLightClassForSourceDeclaration)?.isPossiblyAffectedByAllOpen()
             ?: false) ->
             clsDelegate.hasModifierProperty(name)
