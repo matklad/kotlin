@@ -867,6 +867,11 @@ public class FirDiagnosticsTestGenerated extends AbstractFirDiagnosticsTest {
         public void testSyntheticsVsNormalProperties() throws Exception {
             runTest("compiler/fir/resolve/testData/resolve/problems/syntheticsVsNormalProperties.kt");
         }
+
+        @TestMetadata("trash.kt")
+        public void testTrash() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/problems/trash.kt");
+        }
     }
 
     @TestMetadata("compiler/fir/resolve/testData/resolve/references")

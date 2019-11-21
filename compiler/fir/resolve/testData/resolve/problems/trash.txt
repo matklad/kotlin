@@ -1,0 +1,19 @@
+FILE: test.kt
+    private final fun R|kotlin/String|.isRangeVersion(): R|kotlin/Boolean| {
+        ^isRangeVersion Boolean(true)
+    }
+    public final class User : R|Dummy| {
+        public constructor(): R|User| {
+            super<R|Dummy|>()
+        }
+
+        public final fun test(s: R|kotlin/String?|): R|kotlin/Unit| {
+            when () {
+                !=(R|<local>/s|, Null(null)) ->  {
+                    R|<local>/s|.R|/isRangeVersion|()
+                }
+            }
+
+        }
+
+    }
