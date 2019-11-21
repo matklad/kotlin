@@ -17,7 +17,10 @@ import org.jetbrains.kotlin.fir.scopes.impl.AbstractFirUseSiteMemberScope
 import org.jetbrains.kotlin.fir.scopes.impl.FirSuperTypeScope
 import org.jetbrains.kotlin.fir.symbols.CallableId
 import org.jetbrains.kotlin.fir.symbols.impl.*
+import org.jetbrains.kotlin.load.java.propertyNameByGetMethodName
 import org.jetbrains.kotlin.name.Name
+import org.jetbrains.kotlin.util.capitalizeDecapitalize.capitalizeAsciiOnly
+import org.jetbrains.kotlin.util.capitalizeDecapitalize.capitalizeFirstWord
 
 class JavaClassUseSiteMemberScope(
     klass: FirRegularClass,
@@ -80,7 +83,7 @@ class JavaClassUseSiteMemberScope(
 
     private fun processAccessorFunctionsAndPropertiesByName(
         propertyName: Name,
-        getterName: Name,
+        getterNames: List<Name>,
         setterName: Name,
         processor: (FirCallableSymbol<*>) -> ProcessorAction
     ): ProcessorAction {
@@ -92,12 +95,8 @@ class JavaClassUseSiteMemberScope(
             }
         ) return STOP
         if (klass is FirJavaClass) {
-            if (!declaredMemberScope.processFunctionsByName(getterName) { functionSymbol ->
-                    processAccessorFunction(functionSymbol, propertyName, overrideCandidates, processor, isGetter = true)
-                }
-            ) return STOP
-            if (propertyName.asString().startsWith(IS_PREFIX)) {
-                if (!declaredMemberScope.processFunctionsByName(propertyName) { functionSymbol ->
+            for (getterName in getterNames) {
+                if (!declaredMemberScope.processFunctionsByName(getterName) { functionSymbol ->
                         processAccessorFunction(functionSymbol, propertyName, overrideCandidates, processor, isGetter = true)
                     }
                 ) return STOP
@@ -120,9 +119,18 @@ class JavaClassUseSiteMemberScope(
     }
 
     override fun processPropertiesByName(name: Name, processor: (FirCallableSymbol<*>) -> ProcessorAction): ProcessorAction {
-        val getterName = Name.identifier(GETTER_PREFIX + name.asString().capitalize())
+        val identifier = name.identifier
+        val capitalizedAsciiName = identifier.capitalizeAsciiOnly()
+        val capitalizedFirstWordName = identifier.capitalizeFirstWord(asciiOnly = true)
+        val getterNames = listOfNotNull(
+            Name.identifier(GETTER_PREFIX + capitalizedAsciiName),
+            if (capitalizedFirstWordName == capitalizedAsciiName) null else Name.identifier(GETTER_PREFIX + capitalizedFirstWordName),
+            name.takeIf { identifier.startsWith(IS_PREFIX) }
+        ).filter {
+            propertyNameByGetMethodName(it) == name
+        }
         val setterName = Name.identifier(SETTER_PREFIX + name.asString().capitalize())
-        return processAccessorFunctionsAndPropertiesByName(name, getterName, setterName, processor)
+        return processAccessorFunctionsAndPropertiesByName(name, getterNames, setterName, processor)
     }
 
     companion object {
