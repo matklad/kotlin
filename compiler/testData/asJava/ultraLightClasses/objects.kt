@@ -29,3 +29,13 @@ object Obj : java.lang.Runnable {
     override fun run() {}
     @JvmStatic fun zoo(): Int = 2
 }
+
+object ConstContainer {
+    const val constValue = "SomeValue"
+}
+
+class ClassWithConstContainer {
+    companion object {
+        const val constValue = "SomeValue"
+    }
+}
