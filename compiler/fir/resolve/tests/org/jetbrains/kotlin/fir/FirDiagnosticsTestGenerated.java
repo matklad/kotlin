@@ -820,6 +820,11 @@ public class FirDiagnosticsTestGenerated extends AbstractFirDiagnosticsTest {
             runTest("compiler/fir/resolve/testData/resolve/overrides/generics.kt");
         }
 
+        @TestMetadata("protobufExt.kt")
+        public void testProtobufExt() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/overrides/protobufExt.kt");
+        }
+
         @TestMetadata("simple.kt")
         public void testSimple() throws Exception {
             runTest("compiler/fir/resolve/testData/resolve/overrides/simple.kt");
@@ -828,6 +833,11 @@ public class FirDiagnosticsTestGenerated extends AbstractFirDiagnosticsTest {
         @TestMetadata("simpleFakeOverride.kt")
         public void testSimpleFakeOverride() throws Exception {
             runTest("compiler/fir/resolve/testData/resolve/overrides/simpleFakeOverride.kt");
+        }
+
+        @TestMetadata("supertypeGenerics.kt")
+        public void testSupertypeGenerics() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/overrides/supertypeGenerics.kt");
         }
 
         @TestMetadata("three.kt")
