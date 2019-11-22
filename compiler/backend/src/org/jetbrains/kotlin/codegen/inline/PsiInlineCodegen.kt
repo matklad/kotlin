@@ -36,7 +36,9 @@ class PsiInlineCodegen(
     methodOwner: Type,
     signature: JvmMethodSignature,
     typeParameterMappings: TypeParameterMappings<KotlinType>,
-    sourceCompiler: SourceCompilerForInline
+    sourceCompiler: SourceCompilerForInline,
+    private val actualOwnerType: Type = AsmTypes.OBJECT_TYPE,
+    private val actualDispatchReceiver: Type = actualOwnerType
 ) : InlineCodegen<ExpressionCodegen>(
     codegen, state, function, methodOwner, signature, typeParameterMappings, sourceCompiler,
     ReifiedTypeInliner(typeParameterMappings, object : ReifiedTypeInliner.IntrinsicsSupport<KotlinType> {
@@ -73,7 +75,7 @@ class PsiInlineCodegen(
 
     override fun processAndPutHiddenParameters(justProcess: Boolean) {
         if (getMethodAsmFlags(functionDescriptor, sourceCompiler.contextKind, state) and Opcodes.ACC_STATIC == 0) {
-            invocationParamBuilder.addNextParameter(AsmTypes.OBJECT_TYPE, false)
+            invocationParamBuilder.addNextParameter(actualOwnerType, false).also { it.typeOnStack = actualDispatchReceiver }
         }
 
         for (param in jvmSignature.valueParameters) {

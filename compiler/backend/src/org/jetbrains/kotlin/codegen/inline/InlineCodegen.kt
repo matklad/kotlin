@@ -427,7 +427,7 @@ abstract class InlineCodegen<out T : BaseExpressionCodegen>(
                     val type = info.type
                     val local = StackValue.local(index[i], type)
                     if (!skipStore) {
-                        local.store(StackValue.onStack(type), codegen.v)
+                        local.store(StackValue.onStack(info.typeOnStack), codegen.v)
                     }
                     if (info is CapturedParamInfo) {
                         info.remapValue = local

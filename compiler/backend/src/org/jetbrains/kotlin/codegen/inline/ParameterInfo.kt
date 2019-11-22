@@ -30,6 +30,8 @@ open class ParameterInfo(
     var isCaptured: Boolean = false
     var functionalArgument: FunctionalArgument? = null
 
+    var typeOnStack: Type = type
+
     val isSkippedOrRemapped: Boolean
         get() = isSkipped || isRemapped
 
