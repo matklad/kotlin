@@ -102,9 +102,7 @@ class StaticMembersCompletion(
         val descriptorKindFilter = DescriptorKindFilter.CALLABLES exclude DescriptorKindExclude.Extensions
         val nameFilter: (String) -> Boolean = { prefixMatcher.prefixMatches(it) }
 
-        val filter = { declaration: KtNamedDeclaration, objectDeclaration: KtObjectDeclaration ->
-            !declaration.hasModifier(KtTokens.OVERRIDE_KEYWORD) && objectDeclaration.isTopLevelOrCompanion()
-        }
+        val filter = { _: KtNamedDeclaration, _: KtObjectDeclaration -> true }
         indicesHelper.processObjectMembers(descriptorKindFilter, nameFilter, filter) {
             if (it !in alreadyAdded) {
                 processor(it)
@@ -127,7 +125,7 @@ class StaticMembersCompletion(
         val filter = { _: KtNamedDeclaration, _: KtObjectDeclaration -> true }
 
         indicesHelper.processObjectMembers(descriptorKindFilter, nameFilter, filter) {
-            if (it !in alreadyAdded && it is CallableDescriptor) {
+            if (it is CallableDescriptor && it !in alreadyAdded) {
                 processor(it)
             }
         }
