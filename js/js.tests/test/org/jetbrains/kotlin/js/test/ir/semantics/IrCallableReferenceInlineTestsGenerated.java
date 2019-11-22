@@ -44,6 +44,11 @@ public class IrCallableReferenceInlineTestsGenerated extends AbstractIrCallableR
         runTest("compiler/testData/codegen/boxInline/callableReference/constructor.kt");
     }
 
+    @TestMetadata("inlineValueParameterInsteadOfReceiver.kt")
+    public void testInlineValueParameterInsteadOfReceiver() throws Exception {
+        runTest("compiler/testData/codegen/boxInline/callableReference/inlineValueParameterInsteadOfReceiver.kt");
+    }
+
     @TestMetadata("innerGenericConstuctor.kt")
     public void testInnerGenericConstuctor() throws Exception {
         runTest("compiler/testData/codegen/boxInline/callableReference/innerGenericConstuctor.kt");

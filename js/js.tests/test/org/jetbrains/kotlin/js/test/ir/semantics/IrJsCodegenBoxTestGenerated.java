@@ -1755,6 +1755,11 @@ public class IrJsCodegenBoxTestGenerated extends AbstractIrJsCodegenBoxTest {
                 runTest("compiler/testData/codegen/box/callableReference/function/traitMember.kt");
             }
 
+            @TestMetadata("valueParameterInsteadOfReceiver.kt")
+            public void testValueParameterInsteadOfReceiver() throws Exception {
+                runTest("compiler/testData/codegen/box/callableReference/function/valueParameterInsteadOfReceiver.kt");
+            }
+
             @TestMetadata("compiler/testData/codegen/box/callableReference/function/local")
             @TestDataPath("$PROJECT_ROOT")
             @RunWith(JUnit3RunnerWithInners.class)
