@@ -2190,8 +2190,9 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
             }
         }
 
+        PropertyDescriptor unwrappedDesctiptor = propertyDescriptor;
         if (!isStaticBackingField) {
-            propertyDescriptor = DescriptorUtils.unwrapFakeOverride(propertyDescriptor);
+            unwrappedDesctiptor = DescriptorUtils.unwrapFakeOverride(propertyDescriptor);
         }
 
         Type backingFieldOwner = typeMapper.mapOwner(ownerDescriptor);
@@ -2203,15 +2204,15 @@ public class ExpressionCodegen extends KtVisitor<StackValue, StackValue> impleme
         else if (originalPropertyDescriptor.getContainingDeclaration() == backingFieldContext.getContextDescriptor()) {
             assert backingFieldContext instanceof FieldOwnerContext
                     : "Actual context is " + backingFieldContext + " but should be instance of FieldOwnerContext";
-            fieldName = ((FieldOwnerContext) backingFieldContext).getFieldName(propertyDescriptor, isDelegatedProperty);
+            fieldName = ((FieldOwnerContext) backingFieldContext).getFieldName(unwrappedDesctiptor, isDelegatedProperty);
         }
         else {
-            fieldName = KotlinTypeMapper.mapDefaultFieldName(propertyDescriptor, isDelegatedProperty);
+            fieldName = KotlinTypeMapper.mapDefaultFieldName(unwrappedDesctiptor, isDelegatedProperty);
         }
 
         return StackValue.property(
                 propertyDescriptor, backingFieldOwner,
-                typeMapper.mapType(isDelegatedProperty && forceField ? delegateType : propertyDescriptor.getOriginal().getType()),
+                typeMapper.mapType(isDelegatedProperty && forceField ? delegateType : unwrappedDesctiptor.getOriginal().getType()),
                 isStaticBackingField, fieldName, callableGetter, callableSetter, receiver, this, resolvedCall, skipLateinitAssertion,
                 isDelegatedProperty && forceField ? delegateType : null
         );
