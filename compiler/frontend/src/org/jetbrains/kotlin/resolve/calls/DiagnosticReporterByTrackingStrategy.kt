@@ -356,7 +356,7 @@ class DiagnosticReporterByTrackingStrategy(
             }
 
             NotEnoughInformationForTypeParameter::class.java -> {
-                if (allDiagnostics.any {it is ConstrainingTypeIsError || it is NewConstraintError || it is WrongCountOfTypeArguments})
+                if (allDiagnostics.any {/*it is ConstrainingTypeIsError || */it is NewConstraintError || it is WrongCountOfTypeArguments})
                     return
 
                 val error = diagnostic as NotEnoughInformationForTypeParameter
