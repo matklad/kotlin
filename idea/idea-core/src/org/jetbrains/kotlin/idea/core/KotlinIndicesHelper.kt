@@ -37,7 +37,6 @@ import org.jetbrains.kotlin.idea.resolve.frontendService
 import org.jetbrains.kotlin.idea.search.excludeKotlinSources
 import org.jetbrains.kotlin.idea.search.usagesSearch.descriptor
 import org.jetbrains.kotlin.idea.stubindex.*
-import org.jetbrains.kotlin.idea.util.CallType
 import org.jetbrains.kotlin.idea.util.CallTypeAndReceiver
 import org.jetbrains.kotlin.idea.util.receiverTypes
 import org.jetbrains.kotlin.idea.util.substituteExtensionIfCallable
@@ -158,20 +157,30 @@ class KotlinIndicesHelper(
         val receiverTypeNames = HashSet<String>()
         receiverTypes.forEach { receiverTypeNames.addTypeNames(it) }
 
-        val index = KotlinTopLevelExtensionsByReceiverTypeIndex.INSTANCE
-
-        val declarations = index.getAllKeys(project)
-            .asSequence()
-            .filter {
+        fun findSuitableExtensions(): Set<CallableDescriptor> {
+            val index = KotlinTopLevelExtensionsByReceiverTypeIndex.INSTANCE
+            val result = LinkedHashSet<CallableDescriptor>()
+            for (key in index.getAllKeys(project)) {
                 ProgressManager.checkCanceled()
-                KotlinTopLevelExtensionsByReceiverTypeIndex.receiverTypeNameFromKey(it) in receiverTypeNames
-                        && nameFilter(KotlinTopLevelExtensionsByReceiverTypeIndex.callableNameFromKey(it))
+
+                if (KotlinTopLevelExtensionsByReceiverTypeIndex.receiverTypeNameFromKey(key) !in receiverTypeNames) continue
+                if (!nameFilter(KotlinTopLevelExtensionsByReceiverTypeIndex.callableNameFromKey(key))) continue
+
+                for (declaration in index.get(key, project, scope)) {
+                    if (!declarationFilter(declaration)) continue
+                    for (descriptor in declaration.resolveToDescriptors<CallableDescriptor>()) {
+                        if (descriptor.extensionReceiverParameter == null) continue
+                        if (!descriptorFilter(descriptor)) continue
+                        result.addAll(descriptor.substituteExtensionIfCallable(receiverTypes, callTypeAndReceiver.callType))
+                    }
+                }
             }
-            .flatMap { index.get(it, project, scope).asSequence() }.filter(declarationFilter)
+            return result
+        }
 
-        val suitableExtensions = findSuitableExtensions(declarations, receiverTypes, callTypeAndReceiver.callType)
+        val suitableExtensions = findSuitableExtensions()
 
-        val additionalDescriptors = ArrayList<CallableDescriptor>(0)
+        val additionalDescriptors = mutableListOf<CallableDescriptor>()
 
         val lookupLocation = this.file?.let { KotlinLookupLocation(it) } ?: NoLookupLocation.FROM_IDE
         for (extension in @Suppress("DEPRECATION") KotlinIndicesHelperExtension.getInstances(project)) {
@@ -230,27 +239,6 @@ class KotlinIndicesHelper(
             addAll(possibleTypeAliasExpansionNames(typeName))
         }
         constructor.supertypes.forEach { addTypeNames(it) }
-    }
-
-    /**
-     * Check that function or property with the given qualified name can be resolved in given scope and called on given receiver
-     */
-    private fun findSuitableExtensions(
-        declarations: Sequence<KtCallableDeclaration>,
-        receiverTypes: Collection<KotlinType>,
-        callType: CallType<*>
-    ): Collection<CallableDescriptor> {
-        val result = LinkedHashSet<CallableDescriptor>()
-
-        fun processDescriptor(descriptor: CallableDescriptor) {
-            if (descriptor.extensionReceiverParameter != null && descriptorFilter(descriptor)) {
-                result.addAll(descriptor.substituteExtensionIfCallable(receiverTypes, callType))
-            }
-        }
-
-        declarations.forEach { it.resolveToDescriptors<CallableDescriptor>().forEach(::processDescriptor) }
-
-        return result
     }
 
     fun getJvmClassesByName(name: String): Collection<ClassDescriptor> {
@@ -380,18 +368,23 @@ class KotlinIndicesHelper(
         kindFilter: (ClassKind) -> Boolean = { true }
     ): Collection<ClassDescriptor> {
         val index = KotlinFullClassNameIndex.getInstance()
-        return index.getAllKeys(project).asSequence()
-            .filter { fqName ->
-                ProgressManager.checkCanceled()
-                nameFilter(fqName.substringAfterLast('.'))
-            }
-            .toList()
-            .flatMap { fqName ->
-                index[fqName, project, scope].flatMap { classOrObject ->
-                    classOrObject.resolveToDescriptorsWithHack(psiFilter).filterIsInstance<ClassDescriptor>()
+        val result = mutableListOf<ClassDescriptor>()
+
+        for (fqName in index.getAllKeys(project)) {
+            ProgressManager.checkCanceled()
+            if (!nameFilter(fqName.substringAfterLast('.'))) continue
+            for (classOrObject in index[fqName, project, scope]) {
+                for (descriptor in classOrObject.resolveToDescriptorsWithHack(psiFilter)) {
+                    if (descriptor !is ClassDescriptor) continue
+                    if (!kindFilter(descriptor.kind)) continue
+                    if (!descriptorFilter(descriptor)) continue
+
+                    result += descriptor
                 }
             }
-            .filter { kindFilter(it.kind) && descriptorFilter(it) }
+        }
+
+        return result
     }
 
     fun getTopLevelTypeAliases(nameFilter: (String) -> Boolean): Collection<TypeAliasDescriptor> {
@@ -460,7 +453,8 @@ class KotlinIndicesHelper(
         for (name in allMethodNames) {
             ProgressManager.checkCanceled()
 
-            for (method in shortNamesCache.getMethodsByName(name, scopeWithoutKotlin).filterNot { it is KtLightElement<*, *> }) {
+            for (method in shortNamesCache.getMethodsByName(name, scopeWithoutKotlin)) {
+                if (method is KtLightElement<*, *>) continue
                 if (!method.hasModifierProperty(PsiModifier.STATIC)) continue
                 if (filterOutPrivate && method.hasModifierProperty(PsiModifier.PRIVATE)) continue
                 if (method.containingClass?.parent !is PsiFile) continue // only top-level classes
@@ -484,7 +478,8 @@ class KotlinIndicesHelper(
         for (name in allFieldNames) {
             ProgressManager.checkCanceled()
 
-            for (field in shortNamesCache.getFieldsByName(name, scopeWithoutKotlin).filterNot { it is KtLightElement<*, *> }) {
+            for (field in shortNamesCache.getFieldsByName(name, scopeWithoutKotlin)) {
+                if (field is KtLightElement<*, *>) continue
                 if (!field.hasModifierProperty(PsiModifier.STATIC)) continue
                 if (filterOutPrivate && field.hasModifierProperty(PsiModifier.PRIVATE)) continue
                 val descriptor = field.getJavaMemberDescriptor() ?: continue
